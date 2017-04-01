@@ -10,6 +10,7 @@ import android.widget.ImageView;
 import android.widget.TextView;
 
 import java.util.ArrayList;
+import java.util.List;
 
 
 /**
@@ -21,11 +22,13 @@ public class InboxAdapter extends BaseAdapter{
     Context context;
     ArrayList<ReceivedEmail> emails = new ArrayList<>();
     LayoutInflater inflater;
+    List<Integer> unreadPos;
 
     public InboxAdapter(Context context, ArrayList<ReceivedEmail> emails){
         this.context = context;
         this.emails = emails;
         inflater = (LayoutInflater.from(context));
+        unreadPos = new ArrayList<>();
     }
 
 
@@ -43,22 +46,60 @@ public class InboxAdapter extends BaseAdapter{
         return id;
     }
 
-    public View getView(int id, View view, ViewGroup viewGroup){
-        view = inflater.inflate(R.layout.inbox_email, viewGroup, false);
+    /**
+     * Holds items for view recycling
+     */
+    public class ViewHolder{
+        public long id;
+        public TextView fromText;
+        public TextView dateText;
+        public TextView subjectText;
+        public ImageView unreadImage;
+        public boolean unread;
+    }
 
-        if(emails.get(id).getRead() == false) {
-            ImageView unread = (ImageView) view.findViewById(R.id.unread_view);
-            unread.setBackgroundColor(ContextCompat.getColor(context, R.color.unreadBlue));
+    public void setUnread(ViewHolder viewHolder, boolean unread){
+        if(unread){
+            viewHolder.unreadImage.setBackgroundColor(ContextCompat.getColor(context, R.color.unreadBlue));
+        }else{
+            viewHolder.unreadImage.setBackgroundColor(0);
         }
+    }
 
-        TextView from = (TextView) view.findViewById(R.id.from_view);
-        TextView date = (TextView) view.findViewById(R.id.date_view);
-        TextView subject = (TextView) view.findViewById(R.id.subject_view);
+    /**
+     * Inflates inbox_email.xml and goes through data and adds to view
+     * @see Inbox
+     * @param id
+     * @param currentView
+     * @param viewGroup
+     * @return
+     */
+    public View getView(int id, View currentView, ViewGroup viewGroup){
+        ViewHolder viewHolder;
+        // New view
+        if(currentView == null) {
+            // Init new view holder
+            viewHolder = new ViewHolder();
+            // Inflate view
+            currentView = inflater.inflate(R.layout.inbox_email, viewGroup, false);
 
-        from.setText(emails.get(id).getFrom().toString());
-        date.setText(emails.get(id).getReceivedDate().toString());
-        subject.setText(emails.get(id).getSubject());
+            // Add to views
+            viewHolder.fromText = (TextView) currentView.findViewById(R.id.from_view);
+            viewHolder.dateText = (TextView) currentView.findViewById(R.id.date_view);
+            viewHolder.subjectText = (TextView) currentView.findViewById(R.id.subject_view);
+            viewHolder.unreadImage = (ImageView) currentView.findViewById(R.id.unread_view);
 
-        return view;
+            currentView.setTag(viewHolder);
+        }else {
+            viewHolder = (ViewHolder) currentView.getTag();
+        }
+        // Set data
+        viewHolder.fromText.setText(emails.get(id).getFrom().toString());
+        viewHolder.dateText.setText(emails.get(id).getReceivedDate().toString());
+        viewHolder.subjectText.setText(emails.get(id).getSubject());
+        viewHolder.unread = (emails.get(id).getUnread());
+        setUnread(viewHolder, viewHolder.unread);
+
+        return currentView;
     }
 }

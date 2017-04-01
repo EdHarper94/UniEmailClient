@@ -20,6 +20,10 @@ import javax.mail.Session;
 import javax.mail.Store;
 
 /**
+ *
+ * Inbox view. Grabs inbox messages from IMAP server and passes them to InboxAdapter
+ * @see InboxAdapter
+ *
  * Created by eghar on 30/03/2017.
  */
 
@@ -41,6 +45,7 @@ public class Inbox extends Activity {
 
     static int startEmailDeducter = 10;
     static int endEmailDeducter = 0;
+    boolean finished = true;
 
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -52,23 +57,11 @@ public class Inbox extends Activity {
         lv.setOnScrollListener(new EndlessScrollListener() {
             @Override
             public boolean onLoadMore(int page, int totalItemsCount) {
-
                 new getEmails().execute();
-
                 return true;
+
             }
         });
-    }
-
-    public Properties setServerProperties(){
-        // Server settings
-        props.put("mail.imaps.host", imapSettings.getServerAddress());
-        props.put("mail.imaps.port", imapSettings.getInPort());
-        // Set protocal
-        props.setProperty("mail.store.protocol", "imap");
-        // SSL settings
-        props.put("mail.imaps.ssl.enable", "true");
-        return props;
     }
 
     public class getEmails extends AsyncTask<Void, Void, Void> {
@@ -78,22 +71,25 @@ public class Inbox extends Activity {
             super.onPreExecute();
             pd = new ProgressDialog(Inbox.this);
             pd.setMessage("Fetching Emails...");
+            pd.setCancelable(false);
+            pd.setCanceledOnTouchOutside(false);
             pd.setProgressStyle(ProgressDialog.STYLE_SPINNER);
             pd.show();
         }
 
         @Override
         protected Void doInBackground(Void... params) {
-            props = setServerProperties();
+            props = new ServerProperties().getInboxProperties();
 
             try {
                 session = Session.getInstance(props, null);
                 store = session.getStore("imaps");
                 store.connect(imapSettings.getServerAddress(), EmailUser.getEmailAddress(), EmailUser.getPassword());
-                System.out.println(store);
 
                 inbox = store.getFolder("Inbox");
                 inbox.open(Folder.READ_ONLY);
+
+                // DEBUG CODE
                 System.out.println("# of Undread Messages : " + inbox.getUnreadMessageCount());
 
                 int totalMessages = inbox.getMessageCount();
@@ -108,12 +104,12 @@ public class Inbox extends Activity {
 
                     String text = message.getContent().toString();
 
-                    Boolean seen = false;
+                    Boolean unread = true;
                     if(message.isSet(Flags.Flag.SEEN)){
-                        seen = true;
+                        unread = false;
                     }
 
-                    ReceivedEmail email = new ReceivedEmail(from, date, seen, subject, text);
+                    ReceivedEmail email = new ReceivedEmail(from, date, unread, subject, text);
                     emails.add(email);
                 }
                 inbox.close(false);
@@ -133,7 +129,6 @@ public class Inbox extends Activity {
 
         @Override
         protected void onPostExecute(Void result) {
-            super.onPostExecute(result);
             for (int i = 0; i < emails.size(); i++) {
                 System.out.println(emails.get(i));
             }
@@ -148,7 +143,6 @@ public class Inbox extends Activity {
             if(pd.isShowing()){
                 pd.dismiss();
             }
-
         }
 
     }
