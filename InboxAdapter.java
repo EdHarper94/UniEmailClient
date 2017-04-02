@@ -50,7 +50,6 @@ public class InboxAdapter extends BaseAdapter{
      * Holds items for view recycling
      */
     public class ViewHolder{
-        public long id;
         public TextView fromText;
         public TextView dateText;
         public TextView subjectText;

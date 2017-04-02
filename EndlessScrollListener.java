@@ -2,6 +2,7 @@ package egwh.uniemailclient;
 
 /**
  * Git Repository: https://github.com/codepath/android_guides/wiki/Endless-Scrolling-with-AdapterViews-and-RecyclerView
+ * @author codepath
  */
 
 import android.widget.AbsListView;

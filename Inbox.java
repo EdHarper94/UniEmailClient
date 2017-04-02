@@ -40,12 +40,11 @@ public class Inbox extends Activity {
     private ArrayList<ReceivedEmail> emails = new ArrayList<>();
 
     private InboxAdapter ia;
-    ListView lv;
-    ProgressDialog pd;
+    private ListView lv;
+    private ProgressDialog pd;
 
     static int startEmailDeducter = 10;
     static int endEmailDeducter = 0;
-    boolean finished = true;
 
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -64,6 +63,9 @@ public class Inbox extends Activity {
         });
     }
 
+    /**
+     * Gets emails from server via background thread and then passes them to the UI thread
+     */
     public class getEmails extends AsyncTask<Void, Void, Void> {
 
         @Override
@@ -79,6 +81,7 @@ public class Inbox extends Activity {
 
         @Override
         protected Void doInBackground(Void... params) {
+
             props = new ServerProperties().getInboxProperties();
 
             try {
@@ -89,12 +92,15 @@ public class Inbox extends Activity {
                 inbox = store.getFolder("Inbox");
                 inbox.open(Folder.READ_ONLY);
 
-                // DEBUG CODE
+                // **** DEBUG CODE **** //
                 System.out.println("# of Undread Messages : " + inbox.getUnreadMessageCount());
 
                 int totalMessages = inbox.getMessageCount();
+
+                // Get emails in inbox
                 messages = inbox.getMessages(totalMessages - startEmailDeducter, totalMessages - endEmailDeducter);
 
+                // Go through emails newest to oldest
                 for (int i = messages.length - 1; i >= 0; i--) {
                     Message message = messages[i];
 
@@ -109,12 +115,17 @@ public class Inbox extends Activity {
                         unread = false;
                     }
 
+                    // Create email
                     ReceivedEmail email = new ReceivedEmail(from, date, unread, subject, text);
+                    // Store to array
                     emails.add(email);
                 }
                 inbox.close(false);
                 store.close();
+
+                // **** DEBUG CODE **** //
                 System.out.println("MESSAGES DOWNLOADED");
+
                 startEmailDeducter +=10;
                 endEmailDeducter += 10;
 
@@ -129,14 +140,17 @@ public class Inbox extends Activity {
 
         @Override
         protected void onPostExecute(Void result) {
+            // **** DEBUG CODE **** //
             for (int i = 0; i < emails.size(); i++) {
                 System.out.println(emails.get(i));
             }
             if(emails != null){
                 if(ia == null) {
+                    // If there is no Adapter create one and pass emails
                     ia = new InboxAdapter(Inbox.this, emails);
                     lv.setAdapter(ia);
                 }else{
+                    // Notify Adapter that data has changed
                     ia.notifyDataSetChanged();
                 }
             }
