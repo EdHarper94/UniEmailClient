@@ -23,6 +23,7 @@ public class ServerProperties {
         props.setProperty("mail.store.protocol", imapSettings.getInProtocol());
         // SSL settings
         props.put("mail.imaps.ssl.enable", imapSettings.getIncSll());
+        props.put("mail.imaps.timeout", 1000);
         return props;
     }
 

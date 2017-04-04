@@ -8,12 +8,18 @@ import java.util.Date;
 
 public class Email {
 
+    private Long UID;
     private String subject;
     private String message;
 
-    public Email(String subject, String message){
+    public Email(Long UID, String subject, String message){
+        this.UID = UID;
         this.subject = subject;
         this.message = message;
+    }
+
+    public long getUID(){
+        return UID;
     }
 
     public String getSubject(){
@@ -25,6 +31,6 @@ public class Email {
     }
 
     public String toString(){
-        return "Subject: " + getSubject(); // + ". Message: " + getMessage();
+        return "ID: " + getUID() + ". Subject: " + getSubject(); // + ". Message: " + getMessage();
     }
 }

@@ -16,8 +16,8 @@ public class ReceivedEmail extends Email {
     private Date receivedDate;
     private Boolean unread;
 
-    public ReceivedEmail(Address from, Date receivedDate, Boolean unread, String subject, String message){
-        super(subject, message);
+    public ReceivedEmail(Long UID, String subject, String message, Address from, Date receivedDate, Boolean unread){
+        super(UID, subject, message);
         this.from = from;
         this.receivedDate = receivedDate;
         this.unread = unread;
@@ -35,8 +35,8 @@ public class ReceivedEmail extends Email {
         return unread;
     }
 
-    public void setUnread(){
-        this.unread = true;
+    public void setUnread(Boolean unread){
+        this.unread = unread;
     }
 
     @Override
