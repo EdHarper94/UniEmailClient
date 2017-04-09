@@ -3,9 +3,11 @@ package egwh.uniemailclient;
 import android.app.Activity;
 import android.app.ProgressDialog;
 import android.content.Context;
+import android.content.Intent;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.view.View;
+import android.widget.AdapterView;
 import android.widget.Button;
 import android.widget.ListView;
 import android.widget.Toast;
@@ -28,6 +30,8 @@ import javax.mail.NoSuchProviderException;
 import javax.mail.Session;
 import javax.mail.Store;
 import javax.mail.UIDFolder;
+
+import static egwh.uniemailclient.R.layout.email_view;
 
 /**
  *
@@ -87,6 +91,24 @@ public class Inbox extends Activity {
 
             }
         });
+
+        lv.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+            @Override
+            public void onItemClick(AdapterView<?> adapterView, View view, int position, long id) {
+
+                // Start new intent
+                Intent viewEmail = new Intent(context, EmailActivity.class);
+
+                // Get selected email
+                ReceivedEmail email = (ReceivedEmail) lv.getItemAtPosition(position);
+                long uid = email.getUID();
+
+                // Pass uid to new activity
+                viewEmail.putExtra("email", email);
+                startActivity(viewEmail);
+            }
+        });
+
 
         refreshButton.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -208,7 +230,7 @@ public class Inbox extends Activity {
 
                     // Get data from messages
                     Long UID = uf.getUID(message);
-                    Address from = message.getFrom()[0];
+                    String from = message.getFrom()[0].toString();
                     Date date = message.getReceivedDate();
                     String subject = message.getSubject();
                     String text = message.getContent().toString();
@@ -286,7 +308,6 @@ public class Inbox extends Activity {
             pd.setProgressStyle(ProgressDialog.STYLE_SPINNER);
             pd.show();
         }
-
         @Override
         protected Void doInBackground(Void... result) {
 
@@ -326,6 +347,7 @@ public class Inbox extends Activity {
                     else if(type.equals("d")){
                         Folder deleted = store.getFolder("Deleted Items");
                         inbox.copyMessages(new Message[]{message}, deleted);
+
 
                         /// NEED TO DO SOMETHING ON DELETE. UI CURRENTLY DOESNT CHANGE ///
                     }

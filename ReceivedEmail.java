@@ -1,5 +1,8 @@
 package egwh.uniemailclient;
 
+import android.os.Parcel;
+import android.os.Parcelable;
+
 import java.util.Date;
 
 import javax.mail.Address;
@@ -10,20 +13,24 @@ import javax.mail.Address;
  * Created by eghar on 31/03/2017.
  */
 
-public class ReceivedEmail extends Email {
+public class ReceivedEmail extends Email implements Parcelable {
 
-    private Address from;
+    private String from;
     private Date receivedDate;
     private Boolean unread;
 
-    public ReceivedEmail(Long UID, String subject, String message, Address from, Date receivedDate, Boolean unread){
+    public ReceivedEmail(){
+
+    }
+
+    public ReceivedEmail(Long UID, String subject, String message, String from, Date receivedDate, Boolean unread){
         super(UID, subject, message);
         this.from = from;
         this.receivedDate = receivedDate;
         this.unread = unread;
     }
 
-    public Address getFrom(){
+    public String getFrom(){
         return from;
     }
 
@@ -43,4 +50,41 @@ public class ReceivedEmail extends Email {
     public String toString(){
         return " From: " + getFrom() + ". Date: " + getReceivedDate() + ". Read: " + getUnread();
     }
+
+    protected ReceivedEmail(Parcel in) {
+        from = in.readString();
+        long tmpReceivedDate = in.readLong();
+        receivedDate = tmpReceivedDate != -1 ? new Date(tmpReceivedDate) : null;
+        byte unreadVal = in.readByte();
+        unread = unreadVal == 0x02 ? null : unreadVal != 0x00;
+    }
+
+    @Override
+    public int describeContents() {
+        return 0;
+    }
+
+    @Override
+    public void writeToParcel(Parcel dest, int flags) {
+        dest.writeString(from);
+        dest.writeLong(receivedDate != null ? receivedDate.getTime() : -1L);
+        if (unread == null) {
+            dest.writeByte((byte) (0x02));
+        } else {
+            dest.writeByte((byte) (unread ? 0x01 : 0x00));
+        }
+    }
+
+    @SuppressWarnings("unused")
+    public static final Parcelable.Creator<ReceivedEmail> CREATOR = new Parcelable.Creator<ReceivedEmail>() {
+        @Override
+        public ReceivedEmail createFromParcel(Parcel in) {
+            return new ReceivedEmail(in);
+        }
+
+        @Override
+        public ReceivedEmail[] newArray(int size) {
+            return new ReceivedEmail[size];
+        }
+    };
 }
