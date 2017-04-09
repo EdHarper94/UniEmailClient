@@ -14,7 +14,6 @@ import com.sun.mail.util.MailConnectException;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
 import java.util.Properties;
@@ -282,7 +281,7 @@ public class Inbox extends Activity {
         protected void onPreExecute() {
             super.onPreExecute();
             pd = new ProgressDialog(context);
-            pd.setMessage("Marking Emails...");
+            pd.setMessage("Updating Emails...");
             pd.setProgressStyle(ProgressDialog.STYLE_SPINNER);
             pd.show();
         }
@@ -307,27 +306,36 @@ public class Inbox extends Activity {
                     Long UID = checkedEmails.get(i);
                     Message message = uf.getMessageByUID(UID);
                     Boolean unread;
+                    Boolean seen;
 
                     // If message is mark request
                     if(type.equals("m")) {
-                        if (message.isSet(Flags.Flag.SEEN) == true) {
+                        // If message is marked seen then set to unread
+                        if (message.isSet(Flags.Flag.SEEN)) {
                             unread = true;
-                            message.setFlag(Flags.Flag.SEEN, !unread);
+                            seen = false;
+                            message.setFlag(Flags.Flag.SEEN, seen);
                             toggleUnread(UID, unread);
                             System.out.println(" 1    UID: " + UID + ". Unread: " + unread);
                         } else {
+                            // Message is not seen so set to unread
                             unread = false;
-                            message.setFlag(Flags.Flag.SEEN, !unread);
+                            seen = true;
+                            message.setFlag(Flags.Flag.SEEN, seen);
                             toggleUnread(UID, unread);
                             System.out.println(" 2    UID: " + UID + ". Unread: " + unread);
                         }
                     }
-                    // Else if delete request move to deleted items
+                    // Else if delete request
                     else if(type.equals("d")){
-                        Folder deleted = store.getFolder("Deleted Items");
-                        inbox.copyMessages(new Message[]{message}, deleted);
-
-                        /// NEED TO DO SOMETHING ON DELETE. UI CURRENTLY DOESNT CHANGE ///
+                        Boolean deleted = true;
+                        // Get Deleted Items Folder
+                        Folder deletedItems = store.getFolder("Deleted Items");
+                        // Move email/s to Folder
+                        inbox.copyMessages(new Message[]{message}, deletedItems);
+                        // Delete from Inbox
+                        message.setFlag(Flags.Flag.DELETED, true);
+                        markDeleted(UID);
                     }
                 }
                 inbox.close(true);
@@ -353,11 +361,27 @@ public class Inbox extends Activity {
         }
     }
 
-    // Toggles unread status
+    /**
+     * Toggles the unread status of the passed email
+     * @param UID the uid of the email to toggle
+     * @param unread the status of unread
+     */
     public void toggleUnread(Long UID, Boolean unread){
         for(int i=0; i<emails.size(); i++){
             if(emails.get(i).getUID() == UID){
                 emails.get(i).setUnread(unread);
+            }
+        }
+    }
+
+    /**
+     * Removes email from emails array
+     * @param UID the uid of the email to delete
+     */
+    public void markDeleted(Long UID){
+        for(int i=0;i<emails.size(); i++){
+            if(emails.get(i).getUID() == UID){
+                emails.remove(i);
             }
         }
     }
