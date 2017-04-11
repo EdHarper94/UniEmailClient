@@ -3,11 +3,9 @@ package egwh.uniemailclient;
 import android.app.Activity;
 import android.app.ProgressDialog;
 import android.content.Context;
-import android.content.Intent;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.view.View;
-import android.widget.AdapterView;
 import android.widget.Button;
 import android.widget.ListView;
 import android.widget.Toast;
@@ -16,7 +14,6 @@ import com.sun.mail.util.MailConnectException;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
 import java.util.Properties;
@@ -30,8 +27,6 @@ import javax.mail.NoSuchProviderException;
 import javax.mail.Session;
 import javax.mail.Store;
 import javax.mail.UIDFolder;
-
-import static egwh.uniemailclient.R.layout.email_view;
 
 /**
  *
@@ -91,24 +86,6 @@ public class Inbox extends Activity {
 
             }
         });
-
-        lv.setOnItemClickListener(new AdapterView.OnItemClickListener() {
-            @Override
-            public void onItemClick(AdapterView<?> adapterView, View view, int position, long id) {
-
-                // Start new intent
-                Intent viewEmail = new Intent(context, EmailActivity.class);
-
-                // Get selected email
-                ReceivedEmail email = (ReceivedEmail) lv.getItemAtPosition(position);
-                long uid = email.getUID();
-
-                // Pass uid to new activity
-                viewEmail.putExtra("email", email);
-                startActivity(viewEmail);
-            }
-        });
-
 
         refreshButton.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -230,7 +207,7 @@ public class Inbox extends Activity {
 
                     // Get data from messages
                     Long UID = uf.getUID(message);
-                    String from = message.getFrom()[0].toString();
+                    Address from = message.getFrom()[0];
                     Date date = message.getReceivedDate();
                     String subject = message.getSubject();
                     String text = message.getContent().toString();
@@ -304,10 +281,11 @@ public class Inbox extends Activity {
         protected void onPreExecute() {
             super.onPreExecute();
             pd = new ProgressDialog(context);
-            pd.setMessage("Marking Emails...");
+            pd.setMessage("Updating Emails...");
             pd.setProgressStyle(ProgressDialog.STYLE_SPINNER);
             pd.show();
         }
+
         @Override
         protected Void doInBackground(Void... result) {
 
@@ -328,28 +306,36 @@ public class Inbox extends Activity {
                     Long UID = checkedEmails.get(i);
                     Message message = uf.getMessageByUID(UID);
                     Boolean unread;
+                    Boolean seen;
 
                     // If message is mark request
                     if(type.equals("m")) {
-                        if (message.isSet(Flags.Flag.SEEN) == true) {
+                        // If message is marked seen then set to unread
+                        if (message.isSet(Flags.Flag.SEEN)) {
                             unread = true;
-                            message.setFlag(Flags.Flag.SEEN, !unread);
+                            seen = false;
+                            message.setFlag(Flags.Flag.SEEN, seen);
                             toggleUnread(UID, unread);
                             System.out.println(" 1    UID: " + UID + ". Unread: " + unread);
                         } else {
+                            // Message is not seen so set to unread
                             unread = false;
-                            message.setFlag(Flags.Flag.SEEN, !unread);
+                            seen = true;
+                            message.setFlag(Flags.Flag.SEEN, seen);
                             toggleUnread(UID, unread);
                             System.out.println(" 2    UID: " + UID + ". Unread: " + unread);
                         }
                     }
-                    // Else if delete request move to deleted items
+                    // Else if delete request
                     else if(type.equals("d")){
-                        Folder deleted = store.getFolder("Deleted Items");
-                        inbox.copyMessages(new Message[]{message}, deleted);
-
-
-                        /// NEED TO DO SOMETHING ON DELETE. UI CURRENTLY DOESNT CHANGE ///
+                        Boolean deleted = true;
+                        // Get Deleted Items Folder
+                        Folder deletedItems = store.getFolder("Deleted Items");
+                        // Move email/s to Folder
+                        inbox.copyMessages(new Message[]{message}, deletedItems);
+                        // Delete from Inbox
+                        message.setFlag(Flags.Flag.DELETED, true);
+                        markDeleted(UID);
                     }
                 }
                 inbox.close(true);
@@ -375,11 +361,27 @@ public class Inbox extends Activity {
         }
     }
 
-    // Toggles unread status
+    /**
+     * Toggles the unread status of the passed email
+     * @param UID the uid of the email to toggle
+     * @param unread the status of unread
+     */
     public void toggleUnread(Long UID, Boolean unread){
         for(int i=0; i<emails.size(); i++){
             if(emails.get(i).getUID() == UID){
                 emails.get(i).setUnread(unread);
+            }
+        }
+    }
+
+    /**
+     * Removes email from emails array
+     * @param UID the uid of the email to delete
+     */
+    public void markDeleted(Long UID){
+        for(int i=0;i<emails.size(); i++){
+            if(emails.get(i).getUID() == UID){
+                emails.remove(i);
             }
         }
     }
