@@ -23,8 +23,8 @@ public class ReceivedEmail extends Email implements Parcelable {
 
     }
 
-    public ReceivedEmail(Long UID, String subject, String message, String from, Date receivedDate, Boolean unread){
-        super(UID, subject, message);
+    public ReceivedEmail(Long UID, String subject, String message, Boolean attachment, String from, Date receivedDate, Boolean unread){
+        super(UID, subject, message, attachment);
         this.from = from;
         this.receivedDate = receivedDate;
         this.unread = unread;
@@ -52,6 +52,7 @@ public class ReceivedEmail extends Email implements Parcelable {
     }
 
     protected ReceivedEmail(Parcel in) {
+        super(in);
         from = in.readString();
         long tmpReceivedDate = in.readLong();
         receivedDate = tmpReceivedDate != -1 ? new Date(tmpReceivedDate) : null;
@@ -66,6 +67,7 @@ public class ReceivedEmail extends Email implements Parcelable {
 
     @Override
     public void writeToParcel(Parcel dest, int flags) {
+        super.writeToParcel(dest, flags);
         dest.writeString(from);
         dest.writeLong(receivedDate != null ? receivedDate.getTime() : -1L);
         if (unread == null) {

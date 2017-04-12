@@ -3,9 +3,12 @@ package egwh.uniemailclient;
 import android.app.Activity;
 import android.app.ProgressDialog;
 import android.content.Context;
+import android.content.Intent;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.View;
+import android.widget.AdapterView;
 import android.widget.Button;
 import android.widget.ListView;
 import android.widget.Toast;
@@ -13,20 +16,24 @@ import android.widget.Toast;
 import com.sun.mail.util.MailConnectException;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Properties;
 
-import javax.mail.Address;
+import javax.mail.BodyPart;
 import javax.mail.Flags;
 import javax.mail.Folder;
 import javax.mail.Message;
 import javax.mail.MessagingException;
+import javax.mail.Multipart;
 import javax.mail.NoSuchProviderException;
+import javax.mail.Part;
 import javax.mail.Session;
 import javax.mail.Store;
 import javax.mail.UIDFolder;
+import javax.mail.internet.MimeBodyPart;
 
 /**
  *
@@ -60,6 +67,8 @@ public class Inbox extends Activity {
 
     private Context context;
 
+    private boolean textIsHtml = false;
+
     public Inbox(){
         this.context = Inbox.this;
     }
@@ -84,6 +93,23 @@ public class Inbox extends Activity {
                 new getEmails().execute(refresh);
                 return true;
 
+            }
+        });
+
+        lv.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+            @Override
+            public void onItemClick(AdapterView<?> adapterView, View view, int position, long id) {
+
+                // Start new intent
+                Intent viewEmail = new Intent(context, EmailActivity.class);
+
+                // Get selected email
+                ReceivedEmail email = (ReceivedEmail) lv.getItemAtPosition(position);
+
+                // Pass email to new activity
+                viewEmail.putExtra("email", email);
+
+                startActivity(viewEmail);
             }
         });
 
@@ -162,6 +188,63 @@ public class Inbox extends Activity {
         return messages;
     }
 
+    /**
+     * Source: http://www.oracle.com/technetwork/java/javamail/faq/index.html#mainbody
+     * Return the primary text content of the message.
+     */
+    private String getText(Part p) throws MessagingException, IOException {
+        if (p.isMimeType("text/*")) {
+            String s = (String)p.getContent();
+            textIsHtml = p.isMimeType("text/html");
+            return s;
+        }
+
+        if (p.isMimeType("multipart/alternative")) {
+            // prefer html text over plain text
+            Multipart mp = (Multipart)p.getContent();
+            String text = null;
+            for (int i = 0; i < mp.getCount(); i++) {
+                Part bp = mp.getBodyPart(i);
+                if (bp.isMimeType("text/plain")) {
+                    if (text == null)
+                        text = getText(bp);
+                    continue;
+                } else if (bp.isMimeType("text/html")) {
+                    String s = getText(bp);
+                    if (s != null)
+                        return s;
+                } else {
+                    return getText(bp);
+                }
+            }
+            return text;
+        } else if (p.isMimeType("multipart/*")) {
+            Multipart mp = (Multipart)p.getContent();
+            for (int i = 0; i < mp.getCount(); i++) {
+                String s = getText(mp.getBodyPart(i));
+                if (s != null)
+                    return s;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * http://www.oracle.com/technetwork/java/javamail/faq/index.html#hasattach
+     * @param message
+     * @return
+     * @throws MessagingException
+     * @throws IOException
+     */
+    public boolean hasAttachments(Message message) throws MessagingException, IOException {
+        if (message.isMimeType("multipart/mixed")) {
+            Multipart multipart = (Multipart)message.getContent();
+            if (multipart.getCount() > 1)
+                return true;
+        }
+        return false;
+    }
 
     /**
      * Gets emails from server via background thread and then passes them to the UI thread
@@ -207,18 +290,20 @@ public class Inbox extends Activity {
 
                     // Get data from messages
                     Long UID = uf.getUID(message);
-                    Address from = message.getFrom()[0];
+                    String from = message.getFrom()[0].toString();
                     Date date = message.getReceivedDate();
                     String subject = message.getSubject();
-                    String text = message.getContent().toString();
 
+                    // GET MESSAGE CONTENT
+                    String text = getText(message);
+                    Boolean attachment = hasAttachments(message);
                     Boolean unread = true;
                     if(message.isSet(Flags.Flag.SEEN)){
                         unread = false;
                     }
 
                     // Create email
-                    ReceivedEmail email = new ReceivedEmail(UID , subject, text, from, date, unread);
+                    ReceivedEmail email = new ReceivedEmail(UID , subject, text, attachment, from, date, unread);
                     // Store to array
                     emails.add(email);
                 }
@@ -230,9 +315,9 @@ public class Inbox extends Activity {
 
                 incrementDeductors();
 
-            } catch (IOException e) {
+            }catch (IOException e){
                 e.printStackTrace();
-            } catch (MessagingException me) {
+            }catch (MessagingException me) {
                 me.printStackTrace();
             }
 
@@ -334,7 +419,7 @@ public class Inbox extends Activity {
                         // Move email/s to Folder
                         inbox.copyMessages(new Message[]{message}, deletedItems);
                         // Delete from Inbox
-                        message.setFlag(Flags.Flag.DELETED, true);
+                        message.setFlag(Flags.Flag.DELETED, deleted);
                         markDeleted(UID);
                     }
                 }

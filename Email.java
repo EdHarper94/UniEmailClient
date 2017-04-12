@@ -5,6 +5,8 @@ import android.os.Parcelable;
 
 import java.util.Date;
 
+import javax.mail.Message;
+
 /**
  * Created by eghar on 28/03/2017.
  */
@@ -13,16 +15,18 @@ public class Email implements Parcelable {
 
     private Long UID;
     private String subject;
-    private String message;
+    private String text;
+    private Boolean attachment;
 
     public Email(){
 
     }
 
-    public Email(Long UID, String subject, String message){
+    public Email(Long UID, String subject, String text, Boolean attachment){
         this.UID = UID;
         this.subject = subject;
-        this.message = message;
+        this.text = text;
+        this.attachment = attachment;
     }
 
     public long getUID(){
@@ -33,18 +37,24 @@ public class Email implements Parcelable {
         return subject;
     }
 
-    public String getMessage(){
-        return message;
+    public String getText(){
+        return text;
+    }
+
+    public Boolean getAttachment(){
+        return attachment;
     }
 
     public String toString(){
-        return "ID: " + getUID() + ". Subject: " + getSubject(); // + ". Message: " + getMessage();
+        return "ID: " + getUID() + ". Subject: " + getSubject() + ". Message: " + getText() + ". Attachment: " + getAttachment();
     }
 
     protected Email(Parcel in) {
         UID = in.readByte() == 0x00 ? null : in.readLong();
         subject = in.readString();
-        message = in.readString();
+        text = in.readString();
+        byte attachmentVal = in.readByte();
+        attachment = attachmentVal == 0x02 ? null : attachmentVal != 0x00;
     }
 
     @Override
@@ -61,7 +71,12 @@ public class Email implements Parcelable {
             dest.writeLong(UID);
         }
         dest.writeString(subject);
-        dest.writeString(message);
+        dest.writeString(text);
+        if (attachment == null) {
+            dest.writeByte((byte) (0x02));
+        } else {
+            dest.writeByte((byte) (attachment ? 0x01 : 0x00));
+        }
     }
 
     @SuppressWarnings("unused")

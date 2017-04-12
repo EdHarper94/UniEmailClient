@@ -92,7 +92,7 @@ public class SendEmail extends AsyncTask<Void, Void, Void>{
             mm.setFrom(new InternetAddress((EmailUser.getEmailAddress())));
             mm.addRecipient(Message.RecipientType.TO, new InternetAddress("e.g.harper@hotmail.co.uk"));
             mm.setSubject(email.getSubject(), "UTF-8");
-            mm.setText(email.getMessage());
+            mm.setText(email.getText());
 
             Transport.send(mm);
             System.out.println("EMAIL SENT");
